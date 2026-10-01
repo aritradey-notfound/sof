@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111310">
+  <meta name="description" content="A scientific calculator and interactive calculus graphing workbench.">
+  <title>Function Lab | Calculus Workbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.2.0/math.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111310;
+      --panel: #191c18;
+      --panel-raised: #20241f;
+      --line: #343a31;
+      --muted: #92998d;
+      --text: #edf0e7;
+      --lime: #c9f36a;
+      --coral: #ff816b;
+      --mono: "DM Mono", monospace;
+      --sans: "Manrope", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: var(--sans);
+      background-color: var(--bg);
+      background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+    .shell { width: min(1400px, calc(100% - 56px)); margin: 0 auto; }
+    .topbar { height: 72px; border-bottom: 1px solid rgba(255,255,255,.09); display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 12px; font-weight: 800; letter-spacing: 0; }
+    .brand-mark { width: 32px; height: 32px; display: grid; place-items: center; color: var(--bg); background: var(--lime); border-radius: 5px; font-family: Georgia, serif; font-size: 23px; font-weight: 700; }
+    .brand small { display: block; margin-top: 2px; color: var(--muted); font-family: var(--mono); font-size: 9px; font-weight: 400; }
+    .top-meta { display: flex; align-items: center; gap: 18px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+    .status { display: inline-flex; align-items: center; gap: 7px; }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 12px rgba(201,243,106,.55); }
+
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 28px 0 22px; animation: arrive .45s ease-out both; }
+    .eyebrow { color: var(--lime); font: 10px var(--mono); text-transform: uppercase; }
+    h1 { margin: 7px 0 0; font-size: clamp(24px, 3vw, 34px); line-height: 1.15; letter-spacing: 0; }
+    .intro-note { color: var(--muted); font: 11px var(--mono); }
+    .workspace { display: grid; grid-template-columns: minmax(350px, 440px) minmax(0, 1fr); gap: 16px; align-items: stretch; padding-bottom: 28px; }
+    .panel { min-width: 0; border: 1px solid var(--line); border-radius: 7px; background: rgba(25,28,24,.96); box-shadow: 0 18px 55px rgba(0,0,0,.16); animation: arrive .55s ease-out both; }
+    .calculator { padding: 19px; }
+    .graph-panel { padding: 19px 19px 12px; animation-delay: .08s; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+    .section-title { color: var(--muted); font: 10px var(--mono); text-transform: uppercase; }
+    .small-action { padding: 5px 8px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); font: 10px var(--mono); cursor: pointer; }
+    .small-action:hover { color: var(--text); border-color: #68705f; }
+    .expression-wrap { position: relative; }
+    .expression-wrap label, .field label { display: block; margin-bottom: 7px; color: var(--muted); font: 10px var(--mono); }
+    .expression-input { width: 100%; height: 45px; padding: 0 12px; border: 1px solid #42493d; border-radius: 4px; outline: none; background: #121510; color: var(--lime); font: 14px var(--mono); }
+    .expression-input:focus, .field input:focus { border-color: var(--lime); box-shadow: 0 0 0 2px rgba(201,243,106,.1); }
+    .readout { min-height: 89px; margin: 11px 0 12px; padding: 12px 14px; border-left: 2px solid var(--lime); background: #141712; display: flex; flex-direction: column; justify-content: center; gap: 7px; overflow-wrap: anywhere; }
+    .readout-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .readout-label { color: var(--muted); font: 10px var(--mono); }
+    .evaluation-point { width: 74px; height: 25px; padding: 0 6px; border: 1px solid var(--line); border-radius: 3px; outline: none; background: #121510; color: var(--text); font: 10px var(--mono); text-align: right; }
+    .evaluation-point:focus { border-color: var(--lime); }
+    .readout-value { color: var(--text); font: 25px var(--mono); }
+    .readout-detail { color: var(--lime); font: 11px var(--mono); }
+    .readout.error { border-color: var(--coral); }
+    .readout.error .readout-detail { color: var(--coral); }
+    .keypad { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+    .key { min-width: 0; height: 38px; border: 1px solid #343a31; border-radius: 4px; background: #22261f; color: #d9ded2; font: 12px var(--mono); cursor: pointer; transition: background .12s, border-color .12s, transform .12s; }
+    .key:hover { background: #30362b; border-color: #69745a; }
+    .key:active { transform: translateY(1px); }
+    .key.fn { color: #b8c4a5; font-size: 10px; }
+    .key.operator { color: var(--lime); background: #252b20; }
+    .key.equals { color: #111310; background: var(--lime); border-color: var(--lime); font-weight: 700; }
+    .key.equals:hover { background: #d8ff83; }
+    .calculus { margin-top: 19px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 5px; background: #121510; }
+    .tab { height: 31px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font: 10px var(--mono); cursor: pointer; }
+    .tab[aria-selected="true"] { background: #30372a; color: var(--lime); }
+    .calculus-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 12px; }
+    .field input { width: 100%; height: 35px; padding: 0 9px; border: 1px solid #3b4236; border-radius: 4px; outline: none; background: #121510; color: var(--text); font: 12px var(--mono); }
+    .field.wide { grid-column: 1 / -1; }
+    .calculus-run { width: 100%; height: 36px; margin-top: 10px; border: 1px solid var(--lime); border-radius: 4px; background: var(--lime); color: #111310; font: 700 11px var(--mono); cursor: pointer; }
+    .calculus-run:hover { background: #d8ff83; }
+    .calculus-result { min-height: 40px; padding: 10px 11px; margin-top: 9px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font: 11px/1.6 var(--mono); overflow-wrap: anywhere; }
+    .calculus-result strong { color: var(--text); font-weight: 500; }
+    .calculus-result .accent { color: var(--lime); }
+    .history { margin-top: 17px; }
+    .history-list { display: grid; gap: 3px; max-height: 104px; overflow-y: auto; }
+    .history-item { width: 100%; padding: 6px 8px; border: 0; border-radius: 3px; background: transparent; display: flex; justify-content: space-between; gap: 12px; text-align: left; cursor: pointer; }
+    .history-item:hover { background: #242820; }
+    .history-expression, .history-result { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px var(--mono); }
+    .history-expression { color: var(--muted); }
+    .history-result { color: var(--lime); }
+    .empty-history { padding: 8px; color: #737a6e; font: 10px var(--mono); }
+
+    .graph-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .graph-expression { color: var(--text); font: 13px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .graph-expression span { color: var(--lime); }
+    .graph-tools { display: flex; align-items: center; gap: 9px; }
+    .range-controls { display: flex; align-items: center; gap: 5px; color: var(--muted); font: 10px var(--mono); }
+    .range-controls input { width: 48px; height: 27px; padding: 0 5px; border: 1px solid var(--line); border-radius: 3px; background: #121510; color: var(--text); font: 10px var(--mono); }
+    .plot-button { height: 28px; padding: 0 11px; border: 1px solid var(--lime); border-radius: 4px; background: transparent; color: var(--lime); font: 10px var(--mono); cursor: pointer; }
+    .plot-button:hover { background: rgba(201,243,106,.1); }
+    .graph-options { display: flex; align-items: center; gap: 14px; margin: 14px 0 0; color: var(--muted); font: 10px var(--mono); }
+    .check-option { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .check-option input { accent-color: var(--lime); }
+    #plot { width: 100%; height: min(570px, calc(100vh - 255px)); min-height: 365px; margin-top: 5px; }
+    .graph-footer { display: flex; justify-content: space-between; gap: 10px; padding: 6px 2px 0; color: var(--muted); font: 9px var(--mono); }
+    .graph-footer strong { color: var(--lime); font-weight: 400; }
+    .noscript { margin: 20px auto; padding: 14px; border: 1px solid var(--coral); color: var(--coral); font: 12px var(--mono); }
+    @keyframes arrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: minmax(300px, .9fr) minmax(0, 1.1fr); }
+      .shell { width: min(100% - 32px, 720px); }
+      .calculator, .graph-panel { padding: 15px; }
+      .graph-tools { gap: 6px; }
+      .range-controls input { width: 40px; }
+    }
+    @media (max-width: 680px) {
+      .shell { width: calc(100% - 24px); }
+      .topbar { height: 60px; }
+      .top-meta { gap: 8px; font-size: 9px; }
+      .intro { padding: 20px 0 15px; }
+      .intro-note { max-width: 130px; text-align: right; line-height: 1.6; }
+      .workspace { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      .calculator { order: 1; }
+      .graph-panel { order: 2; }
+      .calculator, .graph-panel { padding: 14px; }
+      #plot { height: 360px; min-height: 300px; }
+      .graph-toolbar { align-items: flex-start; flex-direction: column; }
+      .graph-tools { width: 100%; justify-content: space-between; }
+      .range-controls input { width: 49px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar shell">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">∫</div><div>FUNCTION LAB<small>CALCULUS WORKBENCH · 01</small></div></div>
+    <div class="top-meta"><span class="status">SYSTEM READY</span><span>RAD · SI</span></div>
+  </header>
+
+  <main class="shell">
+    <section class="intro" aria-label="Workspace heading">
+      <div><div class="eyebrow">NUMERICAL INSTRUMENTS / 001</div><h1>Function lab</h1></div>
+      <div class="intro-note">Evaluate · Differentiate · Visualize</div>
+    </section>
+
+    <div class="workspace">
+      <section class="panel calculator" aria-label="Scientific calculator">
+        <div class="section-head"><span class="section-title">Expression</span><button class="small-action" id="clear-button" type="button" title="Clear expression">CLEAR</button></div>
+        <div class="expression-wrap">
+          <label for="expression">f(x) · radians</label>
+          <input id="expression" class="expression-input" type="text" value="sin(x) * exp(-x / 4)" autocomplete="off" spellcheck="false" aria-label="Mathematical expression">
+        </div>
+        <div class="readout" id="readout" aria-live="polite">
+          <div class="readout-top"><div class="readout-label" id="readout-label">f(1)</div><input class="evaluation-point" id="evaluation-point" value="1" inputmode="decimal" aria-label="Evaluate at x"></div>
+          <div class="readout-value" id="readout-value">—</div>
+          <div class="readout-detail" id="readout-detail">Enter to evaluate</div>
+        </div>
+        <div class="keypad" aria-label="Calculator keypad">
+          <button class="key fn" data-insert="sin(" type="button">sin</button><button class="key fn" data-insert="cos(" type="button">cos</button><button class="key fn" data-insert="tan(" type="button">tan</button><button class="key fn" data-insert="log(" type="button">ln</button><button class="key fn" data-insert="sqrt(" type="button">√</button>
+          <button class="key fn" data-insert="asin(" type="button">sin⁻¹</button><button class="key fn" data-insert="acos(" type="button">cos⁻¹</button><button class="key fn" data-insert="atan(" type="button">tan⁻¹</button><button class="key fn" data-insert="abs(" type="button">|x|</button><button class="key fn" data-insert="!" type="button">n!</button>
+          <button class="key operator" data-insert="pi" type="button">π</button><button class="key operator" data-insert="e" type="button">e</button><button class="key operator" data-insert="^2" type="button">x²</button><button class="key operator" data-insert="^" type="button">xʸ</button><button class="key operator" data-insert="x" type="button">x</button>
+          <button class="key" data-insert="7" type="button">7</button><button class="key" data-insert="8" type="button">8</button><button class="key" data-insert="9" type="button">9</button><button class="key operator" data-insert="/" type="button">÷</button><button class="key operator" data-insert="(" type="button">(</button>
+          <button class="key" data-insert="4" type="button">4</button><button class="key" data-insert="5" type="button">5</button><button class="key" data-insert="6" type="button">6</button><button class="key operator" data-insert="*" type="button">×</button><button class="key operator" data-insert=")" type="button">)</button>
+          <button class="key" data-insert="1" type="button">1</button><button class="key" data-insert="2" type="button">2</button><button class="key" data-insert="3" type="button">3</button><button class="key operator" data-insert="-" type="button">−</button><button class="key operator" data-insert="sqrt(" type="button">√</button>
+          <button class="key" data-insert="0" type="button">0</button><button class="key" data-insert="." type="button">.</button><button class="key operator" data-insert="+" type="button">+</button><button class="key operator" data-insert="%" type="button">mod</button><button class="key equals" id="evaluate-button" type="button">=</button>
+        </div>
+
+        <section class="calculus" aria-label="Calculus tools">
+          <div class="section-head"><span class="section-title">Calculus tools</span><span class="section-title">NUMERICAL + SYMBOLIC</span></div>
+          <div class="tabs" role="tablist" aria-label="Calculus operation">
+            <button class="tab" type="button" role="tab" data-mode="derivative" aria-selected="true">d / dx</button>
+            <button class="tab" type="button" role="tab" data-mode="integral" aria-selected="false">∫ dx</button>
+            <button class="tab" type="button" role="tab" data-mode="limit" aria-selected="false">lim</button>
+            <button class="tab" type="button" role="tab" data-mode="roots" aria-selected="false">ROOTS</button>
+          </div>
+          <div class="calculus-fields" id="calculus-fields"></div>
+          <button class="calculus-run" id="calculus-run" type="button">DIFFERENTIATE</button>
+          <div class="calculus-result" id="calculus-result" aria-live="polite">Choose an operation to begin.</div>
+        </section>
+
+        <section class="history" aria-label="Calculation history">
+          <div class="section-head"><span class="section-title">Recent evaluations</span><button class="small-action" id="history-clear" type="button">RESET</button></div>
+          <div class="history-list" id="history-list"><div class="empty-history">Your recent results appear here.</div></div>
+        </section>
+      </section>
+
+      <section class="panel graph-panel" aria-label="Function graph">
+        <div class="section-head"><span class="section-title">Cartesian plot</span><span class="section-title">INTERACTIVE · 2D</span></div>
+        <div class="graph-toolbar">
+          <div class="graph-expression" id="graph-expression">y = <span>sin(x) * exp(-x / 4)</span></div>
+          <div class="graph-tools">
+            <div class="range-controls"><label for="range-min">x</label><input id="range-min" value="-10" inputmode="decimal" aria-label="Graph x minimum"><span>to</span><input id="range-max" value="10" inputmode="decimal" aria-label="Graph x maximum"></div>
+            <button class="plot-button" id="plot-button" type="button">PLOT</button>
+          </div>
+        </div>
+        <div class="graph-options"><label class="check-option"><input id="derivative-overlay" type="checkbox"> Show f′(x)</label><span>Scroll to zoom · drag to pan</span></div>
+        <div id="plot" role="img" aria-label="Interactive graph of the current function"></div>
+        <div class="graph-footer"><span>DOMAIN <strong id="domain-label">[−10, 10]</strong></span><span id="plot-status">READY TO PLOT</span></div>
+      </section>
+    </div>
+  </main>
+  <noscript><div class="shell noscript">Enable JavaScript to use the calculator and interactive graph.</div></noscript>
+
+  <script>
+    (() => {
+      const $ = (selector) => document.querySelector(selector);
+      const expressionInput = $('#expression');
+      const readout = $('#readout');
+      const historyKey = 'function-lab-history-v1';
+      let mode = 'derivative';
+      let history = loadHistory();
+
+      const fieldsForMode = {
+        derivative: { label: 'Evaluate at x =', value: '1', run: 'DIFFERENTIATE' },
+        integral: { label: 'Lower bound a =', value: '0', secondLabel: 'Upper bound b =', secondValue: '2', run: 'INTEGRATE' },
+        limit: { label: 'Approach x →', value: '0', secondLabel: 'Direction', secondValue: 'both', run: 'FIND LIMIT' },
+        roots: { label: 'Search from x =', value: '-10', secondLabel: 'Search to x =', secondValue: '10', run: 'FIND ROOTS' }
+      };
+
+      function formatNumber(value) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return String(value);
+        if (Math.abs(value) < 1e-12) return '0';
+        return Number(value.toPrecision(10)).toString();
+      }
+
+      function compileExpression(source = expressionInput.value) {
+        if (!window.math) throw new Error('Math engine did not load. Check your internet connection and reload.');
+        if (!source.trim()) throw new Error('Enter a mathematical expression first.');
+        return math.compile(source);
+      }
+
+      function evaluateAt(node, x) {
+        const result = node.evaluate({ x });
+        if (typeof result !== 'number' || !Number.isFinite(result)) return NaN;
+        return result;
+      }
+
+      function showError(message) {
+        readout.classList.add('error');
+        $('#readout-label').textContent = 'CALCULATION ERROR';
+        $('#readout-value').textContent = '—';
+        $('#readout-detail').textContent = message;
+      }
+
+      function evaluateCurrent() {
+        try {
+          const node = compileExpression();
+          const x = Number($('#evaluation-point')?.value ?? 1);
+          if (!Number.isFinite(x)) throw new Error('The evaluation point must be a number.');
+          const result = evaluateAt(node, x);
+          if (!Number.isFinite(result)) throw new Error('This expression is not a finite real number at the selected x.');
+          readout.classList.remove('error');
+          $('#readout-label').textContent = `f(${formatNumber(x)})`;
+          $('#readout-value').textContent = formatNumber(result);
+          $('#readout-detail').textContent = `x = ${formatNumber(x)}  ·  radians`;
+          history.unshift({ expression: expressionInput.value, result: formatNumber(result) });
+          history = history.slice(0, 6);
+          saveHistory();
+          renderHistory();
+          return result;
+        } catch (error) {
+          showError(error.message);
+          return NaN;
+        }
+      }
+
+      function loadHistory() {
+        try { return JSON.parse(localStorage.getItem(historyKey) || '[]').slice(0, 6); }
+        catch { return []; }
+      }
+
+      function saveHistory() {
+        try { localStorage.setItem(historyKey, JSON.stringify(history)); } catch { /* Storage may be unavailable in private browsing. */ }
+      }
+
+      function renderHistory() {
+        const container = $('#history-list');
+        container.replaceChildren();
+        if (!history.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-history';
+          empty.textContent = 'Your recent results appear here.';
+          container.append(empty);
+          return;
+        }
+        history.forEach((item) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'history-item';
+          button.innerHTML = '<span class="history-expression"></span><span class="history-result"></span>';
+          button.querySelector('.history-expression').textContent = item.expression;
+          button.querySelector('.history-result').textContent = item.result;
+          button.addEventListener('click', () => {
+            expressionInput.value = item.expression;
+            evaluateCurrent();
+            drawGraph();
+          });
+          container.append(button);
+        });
+      }
+
+      function renderFields() {
+        const config = fieldsForMode[mode];
+        const container = $('#calculus-fields');
+        container.replaceChildren();
+        const first = document.createElement('div');
+        first.className = 'field';
+        first.innerHTML = `<label for="calc-first">${config.label}</label><input id="calc-first" value="${config.value}" inputmode="decimal">`;
+        container.append(first);
+        if (config.secondLabel) {
+          const second = document.createElement('div');
+          second.className = 'field';
+          second.innerHTML = `<label for="calc-second">${config.secondLabel}</label><input id="calc-second" value="${config.secondValue}" ${mode === 'limit' ? 'list="limit-directions"' : 'inputmode="decimal"'}>`;
+          if (mode === 'limit') second.insertAdjacentHTML('beforeend', '<datalist id="limit-directions"><option value="both"><option value="left"><option value="right"></datalist>');
+          container.append(second);
+        }
+        $('#calculus-run').textContent = config.run;
+      }
+
+      function setCalculusResult(html) {
+        $('#calculus-result').innerHTML = html;
+      }
+
+      function integrate(node, a, b, count = 2048) {
+        if (!Number.isFinite(a) || !Number.isFinite(b)) throw new Error('Bounds must be finite numbers.');
+        if (a === b) return 0;
+        if (b < a) return -integrate(node, b, a, count);
+        const step = (b - a) / count;
+        let total = evaluateAt(node, a) + evaluateAt(node, b);
+        for (let index = 1; index < count; index += 1) {
+          const value = evaluateAt(node, a + index * step);
+          if (!Number.isFinite(value)) throw new Error('The function is undefined inside these integration bounds.');
+          total += (index % 2 === 0 ? 2 : 4) * value;
+        }
+        if (!Number.isFinite(total)) throw new Error('The function is undefined at an integration bound.');
+        return total * step / 3;
+      }
+
+      function computeLimit(node, point, side) {
+        const samples = [];
+        for (const scale of [1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7]) {
+          const value = evaluateAt(node, point + (side === 'left' ? -scale : scale) * Math.max(1, Math.abs(point)));
+          if (Number.isFinite(value)) samples.push(value);
+        }
+        if (samples.length < 3) return NaN;
+        const tail = samples.slice(-3);
+        return tail.reduce((sum, value) => sum + value, 0) / tail.length;
+      }
+
+      function findRoots(node, lower, upper) {
+        if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper) throw new Error('Use finite search bounds with the first lower than the second.');
+        const roots = [];
+        const steps = 1200;
+        let previousX = lower;
+        let previousY = evaluateAt(node, previousX);
+        for (let index = 1; index <= steps; index += 1) {
+          const x = lower + (upper - lower) * index / steps;
+          const y = evaluateAt(node, x);
+          if (Number.isFinite(y) && Math.abs(y) < 1e-10) roots.push(x);
+          if (Number.isFinite(previousY) && Number.isFinite(y) && previousY * y < 0) {
+            let left = previousX;
+            let right = x;
+            let leftValue = previousY;
+            for (let iteration = 0; iteration < 55; iteration += 1) {
+              const middle = (left + right) / 2;
+              const middleValue = evaluateAt(node, middle);
+              if (!Number.isFinite(middleValue)) break;
+              if (leftValue * middleValue <= 0) right = middle;
+              else { left = middle; leftValue = middleValue; }
+            }
+            roots.push((left + right) / 2);
+          }
+          previousX = x;
+          previousY = y;
+        }
+        return roots.filter((root, index) => roots.findIndex((candidate) => Math.abs(candidate - root) < 1e-5) === index);
+      }
+
+      function runCalculus() {
+        try {
+          const source = expressionInput.value;
+          const node = compileExpression(source);
+          const first = Number($('#calc-first').value);
+          if (!Number.isFinite(first)) throw new Error('Enter a finite number.');
+          if (mode === 'derivative') {
+            const derivative = math.derivative(source, 'x');
+            const value = evaluateAt(derivative, first);
+            setCalculusResult(`<strong>f′(x) =</strong> <span class="accent">${escapeHtml(derivative.toString())}</span><br><strong>f′(${formatNumber(first)}) =</strong> <span class="accent">${formatNumber(value)}</span>`);
+          } else if (mode === 'integral') {
+            const second = Number($('#calc-second').value);
+            const value = integrate(node, first, second);
+            setCalculusResult(`<strong>∫<sub>${formatNumber(first)}</sub><sup>${formatNumber(second)}</sup> f(x) dx =</strong> <span class="accent">${formatNumber(value)}</span><br>Composite Simpson’s rule · 2,048 intervals`);
+          } else if (mode === 'limit') {
+            const direction = $('#calc-second').value.trim().toLowerCase();
+            if (!['both', 'left', 'right'].includes(direction)) throw new Error('Direction must be both, left, or right.');
+            const left = direction !== 'right' ? computeLimit(node, first, 'left') : null;
+            const right = direction !== 'left' ? computeLimit(node, first, 'right') : null;
+            const values = [left, right].filter((value) => value !== null && Number.isFinite(value));
+            if (!values.length) throw new Error('Could not estimate a finite limit near this point.');
+            const agrees = values.length === 1 || Math.abs(left - right) < 1e-3 * Math.max(1, Math.abs(left), Math.abs(right));
+            const result = agrees ? (values.reduce((sum, value) => sum + value, 0) / values.length) : 'does not exist';
+            const details = [left === null ? '' : `left: ${formatNumber(left)}`, right === null ? '' : `right: ${formatNumber(right)}`].filter(Boolean).join(' · ');
+            setCalculusResult(`<strong>lim<sub>x→${formatNumber(first)}</sub> f(x) =</strong> <span class="accent">${typeof result === 'number' ? formatNumber(result) : result}</span><br>${details} · numerical estimate`);
+          } else {
+            const second = Number($('#calc-second').value);
+            const roots = findRoots(node, first, second);
+            setCalculusResult(roots.length ? `<strong>Roots in [${formatNumber(first)}, ${formatNumber(second)}]:</strong><br><span class="accent">${roots.map(formatNumber).join(' · ')}</span>` : '<strong>No sign-changing roots found in this interval.</strong><br>Even-multiplicity roots may not be detected.');
+          }
+        } catch (error) {
+          setCalculusResult(`<span style="color:var(--coral)">${escapeHtml(error.message)}</span>`);
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+      }
+
+      function drawGraph() {
+        const status = $('#plot-status');
+        try {
+          if (!window.Plotly) throw new Error('Graphing engine did not load. Check your internet connection and reload.');
+          const node = compileExpression();
+          const lower = Number($('#range-min').value);
+          const upper = Number($('#range-max').value);
+          if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower >= upper) throw new Error('Set a valid x range.');
+          const derivative = $('#derivative-overlay').checked ? math.derivative(expressionInput.value, 'x') : null;
+          const x = [];
+          const y = [];
+          const dy = [];
+          for (let index = 0; index <= 600; index += 1) {
+            const point = lower + (upper - lower) * index / 600;
+            x.push(point);
+            y.push(evaluateAt(node, point));
+            if (derivative) dy.push(evaluateAt(derivative, point));
+          }
+          const traces = [{ x, y, type: 'scatter', mode: 'lines', name: 'f(x)', connectgaps: false, line: { color: '#c9f36a', width: 2.5 }, hovertemplate: 'x = %{x:.5g}<br>f(x) = %{y:.5g}<extra></extra>' }];
+          if (derivative) traces.push({ x, y: dy, type: 'scatter', mode: 'lines', name: "f′(x)", connectgaps: false, line: { color: '#ff816b', width: 1.8, dash: 'dot' }, hovertemplate: 'x = %{x:.5g}<br>f′(x) = %{y:.5g}<extra></extra>' });
+          Plotly.react('plot', traces, {
+            paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: { l: 52, r: 18, t: 12, b: 43 },
+            font: { family: 'DM Mono, monospace', size: 10, color: '#92998d' },
+            xaxis: { title: { text: 'x', standoff: 9 }, range: [lower, upper], gridcolor: '#292e27', zerolinecolor: '#58604f', linecolor: '#343a31', mirror: false, ticks: 'outside', tickcolor: '#50574a' },
+            yaxis: { title: { text: 'y', standoff: 8 }, gridcolor: '#292e27', zerolinecolor: '#58604f', linecolor: '#343a31', ticks: 'outside', tickcolor: '#50574a', automargin: true },
+            legend: { orientation: 'h', x: 1, xanchor: 'right', y: 1.08, font: { color: '#c5cbbb', size: 10 } },
+            hovermode: 'x unified', showlegend: Boolean(derivative),
+          }, { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'] });
+          $('#graph-expression').innerHTML = `y = <span>${escapeHtml(expressionInput.value)}</span>`;
+          $('#domain-label').textContent = `[${formatNumber(lower)}, ${formatNumber(upper)}]`;
+          status.textContent = 'PLOT UPDATED';
+        } catch (error) {
+          status.textContent = error.message.toUpperCase();
+          if (window.Plotly) Plotly.purge('plot');
+        }
+      }
+
+      function insertAtCursor(text) {
+        const start = expressionInput.selectionStart;
+        const end = expressionInput.selectionEnd;
+        expressionInput.setRangeText(text, start, end, 'end');
+        expressionInput.focus();
+      }
+
+      document.querySelectorAll('[data-insert]').forEach((button) => button.addEventListener('click', () => insertAtCursor(button.dataset.insert)));
+      document.querySelectorAll('[data-mode]').forEach((tab) => tab.addEventListener('click', () => {
+        mode = tab.dataset.mode;
+        document.querySelectorAll('[data-mode]').forEach((item) => item.setAttribute('aria-selected', String(item === tab)));
+        renderFields();
+      }));
+      $('#evaluate-button').addEventListener('click', evaluateCurrent);
+      $('#calculus-run').addEventListener('click', runCalculus);
+      $('#plot-button').addEventListener('click', drawGraph);
+      $('#derivative-overlay').addEventListener('change', drawGraph);
+      $('#expression').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); evaluateCurrent(); }
+      });
+      $('#evaluation-point').addEventListener('change', evaluateCurrent);
+      $('#clear-button').addEventListener('click', () => {
+        expressionInput.value = '';
+        expressionInput.focus();
+        readout.classList.remove('error');
+        $('#readout-label').textContent = 'f(x)';
+        $('#readout-value').textContent = '—';
+        $('#readout-detail').textContent = 'Enter an expression';
+      });
+      $('#history-clear').addEventListener('click', () => { history = []; saveHistory(); renderHistory(); });
+      expressionInput.addEventListener('change', drawGraph);
+
+      renderFields();
+      renderHistory();
+      evaluateCurrent();
+      drawGraph();
+      runCalculus();
+    })();
+  </script>
+</body>
+</html>
